@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- chart link -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+</head>
+<style>
+
+    body {
+         background-color : #E0E7E9;
+    }
+
+    .navbar-nav {
+        display: flex;
+        list-style-type: none; /* 목록 기호 제거 */
+        padding-left: 0; /* 왼쪽 여백 제거 */
+    }
+
+    .nav-item {
+        margin-right: 10px; /* 각 항목 사이의 간격 설정 */
+    }
+
+    #search-form {
+        width : 30%;
+    }
+
+    .navbar-light {
+        background-color : #b4b4b4;
+    }
+
+    .navbar-item a{
+        color : white;
+    }
+
+    .home-link{
+        margin-left : 10px;
+        margin-right : 10px;
+    }
+
+    .userEmail-dropdown{
+        position : relative;
+    }
+
+    .location-dropdown{
+        position : relative;
+    }
+
+    .dropdown-menu {
+        position : absolute;
+    }
+
+    .dropdown-toggle {
+        margin-right : 10px;
+    }
+
+    #map {
+         margin : 40px auto;
+    }
+    #weather-image{
+        display: flex;
+        justify-content: center;
+    }
+
+    #weather-image > span {
+        font-size : 20px;
+        margin : 60px 15px;
+    }
+
+    #weather-image > span > div{
+        margin-top: -30px;
+    }
+
+    #cloud-sun-container {
+        margin-left : -100px;
+    }
+
+    #cloud-sun-container > svg:first-child {
+        transform : translateX(100px);
+    }
+
+    #cloud-sun-container > svg:nth-child(2) {
+        transform : translateX(-60px);
+    }
+
+    #sub-layout {
+        margin-bottom : 50px;
+    }
+
+    #sub-layout div {
+        font-size : 35px;
+        text-align: center;
+        padding-top : 30px;
+    }
+
+    #logo-container{
+        margin : 0 -11% -10px;
+    }
+
+    #logo{
+        width : 40px;
+        height : 40px;
+    }
+
+    #logo-container > span{
+        font-size : 22px;
+    }
+
+    #location {
+        margin : 0 auto;
+    }
+
+    #weather-info {
+        display : flex;
+        justify-content: center; <!--요소들 가운데 정렬-->
+        align-items : center;
+        margin-top : -40px;
+<!--        margin : -10px auto;-->
+    }
+
+    #weather-info > div {
+        margin : 0 15px;
+    }
+
+    .info-item {
+        text-align: center;
+        margin-top: -10px;
+    }
+
+    .info-item span {
+        display: block;
+        font-size: 20px;
+    }
+
+    .info-item > div{
+        margin-top : -30px;
+    }
+
+    #temperature-change-container {
+        width : 70%;
+        height : 650px;
+        margin : 0 auto;
+    }
+
+    #temperature-change-container h2 {
+        font-size : 22px;
+        margin-left : 65px;
+    }
+
+    .btn-toolbar mb-2 mb-md-0 {
+    }
+
+    .card{
+        width : 70%;
+        margin : 10px auto;
+    }
+
+    .card-body {
+        width : 70%;
+        margin : 0 auto;
+    }
+
+    #myCanvas{
+        margin : auto auto;
+    }
+
+    .btn-svg{
+        cursor : pointer;
+    }
+
+    .btn-svg > svg {
+        margin-top : -5px;
+        margin-left : -10px;
+    }
+
+</style>
+<body>
+<div class="layout" id="main-layout">
+    <nav class="navbar navbar-light">
+        <ul class="nav justify-content-end">
+            <li class="nav-item">
+                <div th:if="${session.loginEmail}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="/weather" class="d-flex align-items-center text-white text-decoration-none home-link">
+                            <strong>Home</strong>
+                        </a>
+                        <div class="userEmail-dropdown">
+                            <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <strong th:text="${session.loginEmail}"></strong>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark text-small shadow" style="">
+                                <li><a class="dropdown-item" href="#">Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="/weather/logoutpro">Log out</a></li>
+                            </ul>
+                        </div>
+                        <div th:if="${location} != null">
+                            <div class="location-dropdown">
+                                <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <strong>관심 지역</strong>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-dark text-small shadow" id="location-dropdown" style="">
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${session.loginEmail} == null">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="/weather" class="d-flex align-items-center text-white text-decoration-none home-link">
+                            <strong>Home</strong>
+                        </a>
+                    </div>
+                </div>
+            </li>
+        </ul>
+        <form class="d-flex" role="search" id="search-form">
+            <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" name="input-search" id="input">
+            <button class="btn btn-outline-success" type="submit" id="search-button">Search</button>
+        </form>
+    </nav>
+</div>
+<div th:if="${userInput} != null">
+    <div id="map" style="width:80%;height:600px;"></div>
+    <hr class="featurette-divider">
+    <div class="layout" id="sub-layout">
+        <div class="container" id="logo-container">
+            <img src="/images/기상청2.png" id="logo"><span>기상청 제공</span></img>
+            <span th:text="${userInput}" id="location"></span>
+            <button id="bookmark" class="btn btn-svg">
+                <svg id="bookmark-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bookmark" viewBox="0 0 16 16">
+                    <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z"/>
+                </svg>
+            </button>
+        </div>
+        <!--        1 : 맑음-->
+        <!--        2 : 구름 조금-->
+        <!--        3 : 구름 많음-->
+        <!--        4 : 흐림-->
+        <div class="container" id="weather-image">
+            <div th:if="${sky_state == 1}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" fill="#ff7f00" class="bi bi-sun" viewBox="0 0 16 16" id="bi-sun">
+                    <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+                </svg>
+            </div>
+            <div th:if="${sky_state == 2}" id="cloud-sun-container">
+                <!-- 구름 SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" fill="#a0a0a0" class="bi bi-cloud-sun-fill" viewBox="0 0 16 16">
+                    <path d="M11.473 11a4.5 4.5 0 0 0-8.72-.99A3 3 0 0 0 3 16h8.5a2.5 2.5 0 0 0 0-5z"/>
+                </svg>
+                <!-- 태양 SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" fill="#ff7f00" class="bi bi-cloud-sun-fill" viewBox="0 0 16 16">
+                    <path d="M10.5 1.5a.5.5 0 0 0-1 0v1a.5.5 0 0 0 1 0zm3.743 1.964a.5.5 0 1 0-.707-.707l-.708.707a.5.5 0 0 0 .708.708zm-7.779-.707a.5.5 0 0 0-.707.707l.707.708a.5.5 0 1 0 .708-.708zm1.734 3.374a2 2 0 1 1 3.296 2.198q.3.423.516.898a3 3 0 1 0-4.84-3.225q.529.017 1.028.129m4.484 4.074c.6.215 1.125.59 1.522 1.072a.5.5 0 0 0 .039-.742l-.707-.707a.5.5 0 0 0-.854.377M14.5 6.5a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z"/>
+                </svg>
+            </div>
+            <div th:if="${sky_state == 3}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" fill="#808080" class="bi bi-cloudy-fill" viewBox="0 0 16 16">
+                    <path d="M13.405 7.027a5.001 5.001 0 0 0-9.499-1.004A3.5 3.5 0 1 0 3.5 13H13a3 3 0 0 0 .405-5.973"/>
+                </svg>
+            </div>
+            <div th:if="${sky_state == 4}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" fill="#808080" class="bi bi-clouds-fill" viewBox="0 0 16 16">
+                    <path d="M11.473 9a4.5 4.5 0 0 0-8.72-.99A3 3 0 0 0 3 14h8.5a2.5 2.5 0 1 0-.027-5"/>
+                    <path d="M14.544 9.772a3.5 3.5 0 0 0-2.225-1.676 5.5 5.5 0 0 0-6.337-4.002 4.002 4.002 0 0 1 7.392.91 2.5 2.5 0 0 1 1.17 4.769z"/>
+                </svg>
+            </div>
+            <span>현재 기온<div th:text="${current_temperature} + '℃'"></div></span>
+        </div>
+
+        <div class="weather-info" id="weather-info">
+            <div class="info-item">
+                <span>강수확률</span>
+                <div th:text="${Precipitation_probability_value_average} + '%'"></div>
+            </div>
+            <div class="info-item">
+                <span>최고기온</span>
+                <div th:text="${max_temperature} + '℃'"></div>
+            </div>
+            <div class="info-item">
+                <span>최저기온</span>
+                <div th:text="${min_temperature} + '℃'"></div>
+            </div>
+        </div>
+    </div>
+    <hr class="featurette-divider">
+    <div class="container" id="temperature-change-container">
+        <div class="btn-toolbar mb-2 mb-md-0 d-flex justify-content-end">
+            <div class="btn-group me-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" name="temperature">기온</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" name="windSpeed">풍속</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" name="precipitation">강수확률</button>
+            </div>
+        </div>
+        <div class="row py-2">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row py-4">
+                        <canvas id="myCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal" id="warning-modal" tabindex="-1">
+        <div class="modal-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Please Login</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>로그인이 필요한 서비스입니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script th:inline="javascript">
+
+    $(document).ready(function() {
+
+        var globalUserInput = '';
+        var sessionValue = /*[[${session.loginEmail}]]*/ '';
+        console.log(sessionValue);
+
+        sendLoginEmail(sessionValue);
+
+        function sendLoginEmail(sessionValue){
+         $.ajax({
+                    type: "GET",
+                    url: "/weather/main",
+                    data: {
+                        loginEmail : sessionValue,
+                    },
+                    success: function(response) {
+                        console.log("서버 응답:");
+                    },
+                    error: function(error) {
+                        console.log("에러 발생:", error);
+                    }
+                });
+         }
+
+        $('#input').on('input', function(){
+            let userInput = $(this).val();
+            globalUserInput = userInput
+            console.log("Input changed:", globalUserInput);
+        });
+
+        $('#input').keydown(function(event){
+            if (event.which === 13){
+                event.preventDefault();
+                $('#search-button').click();
+            }
+        });
+
+        /*<![CDATA[ */
+
+        var userInput = [[${userInput}]];
+        var location= [[${location}]];
+
+        /*]]*/
+
+        var locationList = [];
+
+        if (location){
+            locationList = location.split(',');
+        }
+        console.log(locationList);
+        console.log('받아온 리스트', location);
+        console.log("현재검색location", userInput);
+
+        var location_dropdown = $('#location-dropdown')
+        for (let itemCount = 0; itemCount < locationList.length; itemCount ++){
+            var locationItem = `<li><a class="dropdown-item" href="/weather/main?userInput=${encodeURIComponent(locationList[itemCount])}">${locationList[itemCount]}</a></li>`
+            location_dropdown.append(locationItem);
+        }
+
+        if (sessionValue && userInput){
+            var bookmarkIcon = document.getElementById('bookmark-icon');
+            var currentClass = bookmarkIcon.getAttribute('class');
+            var currentColor = window.getComputedStyle(bookmarkIcon).color;
+
+            if (locationList.includes(userInput)) {
+                bookmarkIcon.setAttribute('class', 'bi bi-bookmark-fill');
+                bookmarkIcon.setAttribute('fill', '#FFD400');
+                bookmarkIcon.innerHTML = `
+                <path d="M2 2v13.5a.5.5 0 0 0 .74.439L8 13.069l5.26 2.87A.5.5 0 0 0 14 15.5V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2"/>
+                `;
+            }
+        }
+
+        $('#search-button').on('click', function(event){
+            event.preventDefault(); // 폼의 기본 제출 동작 방지
+            sendSearchRequest();
+        });
+
+        function sendSearchRequest() {
+            if (globalUserInput){
+                $.ajax({
+                    type: "GET",
+                    url: "/weather/main",
+                    data: {
+                        userInput : globalUserInput
+                    },
+                    success: function(response) {
+                        console.log("서버 응답:");
+                    },
+                    error: function(error) {
+                        console.log("에러 발생:", error);
+                    }
+                }).done(function(){
+                    // 요청이 성공했을 경우에
+                    searchMap(globalUserInput);
+                });
+            }
+        }
+
+        $('#bookmark').on('click', function(event){
+            var sessionValue =  /*[[${session.loginEmail}]]*/ '';
+            if (sessionValue){
+                var bookmarkIcon = document.getElementById('bookmark-icon');
+                var currentClass = bookmarkIcon.getAttribute('class');
+                var currentColor = window.getComputedStyle(bookmarkIcon).color;
+
+                if(currentClass === 'bi bi-bookmark' && (!locationList.includes(userInput))){
+                    locationList.push(userInput);
+                    console.log(locationList);
+                    bookmarkIcon.setAttribute('class', 'bi bi-bookmark-fill');
+                    bookmarkIcon.setAttribute('fill', '#FFD400');
+                    bookmarkIcon.innerHTML = `
+                    <path d="M2 2v13.5a.5.5 0 0 0 .74.439L8 13.069l5.26 2.87A.5.5 0 0 0 14 15.5V2a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2"/>
+                `;
+                }
+                else if(currentClass === 'bi bi-bookmark-fill' && (locationList.includes(userInput))){
+                    locationList = locationList.filter((e) => e !== userInput);
+                    console.log(locationList);
+                    bookmarkIcon.setAttribute('class', 'bi bi-bookmark');
+                    bookmarkIcon.setAttribute('fill', currentColor);
+                     bookmarkIcon.innerHTML = `
+                    <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1z"/>
+                `;
+                }
+                $.ajax({
+                    type : 'POST',
+                    url : '/weather/main',
+                    data : {
+                        locationList : locationList,
+                        loginEmail : sessionValue
+                    },
+                    success: function(response) {
+                        console.log("서버 응답");
+                    },
+                    error: function(error) {
+                        console.log("에러 발생:", error);
+                    }
+                });
+            }
+            else{
+                 $('#warning-modal').modal('show');
+            }
+        });
+
+        /*<![CDATA[ */
+
+        var temperatureData = Object.values([[${Today_Temperature}]] || {});
+        var windSpeedData = Object.values([[${Today_windSpeed}]] || {});
+        var precipitationData = Object.values([[${Today_precipitation_probability}]] || {});
+
+        console.log('temp', temperatureData)
+        console.log('wind', windSpeedData)
+        console.log('pre', precipitationData)
+
+        /*]]*/
+
+        //기본으로 선택(기온)
+        showTemperature();
+
+        $('.btn-group button').click(function(){
+            var buttonName = $(this).attr('name');
+
+            switch(buttonName){
+                case 'temperature':
+                    console.log('temperature')
+                    showTemperature();
+                    break;
+
+                case 'windSpeed':
+                    console.log('windSpeed')
+                    showWindSpeed();
+                    break;
+
+                case 'precipitation':
+                    showPrecipitation();
+                    break;
+            }
+        });
+               function showTemperature() {
+            var lineData = {
+                labels : ['2시', '5시', '8시', '11시', '14시', '17시', '20시', '23시'],
+                datasets : [
+                    {
+                        data  : temperatureData,
+                        backgroundColor : 'rgba(255, 99, 132, 0)',
+                        borderColor : 'rgba(255, 99, 132, 1)'
+                    }
+                ]
+            };
+
+            var line = document.getElementById('myCanvas');
+            if(line){
+                new Chart(line, {
+                    type : 'line',
+                    data : lineData,
+                    options : {
+                        legend : {
+                            display : false
+                        },
+                        scales:{
+                            yAxes : [
+                                {
+                                    ticks : {
+                                        suggestedMin : 0,
+                                        beginAtZero : true
+                                    }
+                                }
+                            ]
+                        }
+                    }
+
+                })
+            }
+        }
+
+        function showWindSpeed(){
+            var lineData = {
+                    labels : ['2시', '5시', '8시', '11시', '14시', '17시', '20시', '23시'],
+                    datasets : [
+                        {
+                            data  : windSpeedData,
+                            backgroundColor : 'rgba(255, 99, 132, 0)',
+                            borderColor : 'rgba(255, 99, 132, 1)'
+                        }
+                    ]
+            };
+            var line = document.getElementById('myCanvas');
+            if(line){
+                new Chart(line, {
+                    type : 'line',
+                    data : lineData,
+                    options : {
+                        legend : {
+                            display : false
+                        },
+                        scales:{
+                            yAxes : [
+                                {
+                                    ticks : {
+                                        suggestedMin : 0,
+                                        beginAtZero : true
+                                    }
+                                }
+                            ]
+                        }
+                    }
+
+                })
+            }
+
+        }
+
+        function showPrecipitation(){
+            var lineData = {
+                        labels : ['2시', '5시', '8시', '11시', '14시', '17시', '20시', '23시'],
+                        datasets : [
+                            {
+                                data  : precipitationData,
+                                backgroundColor : 'rgba(255, 99, 132, 0)',
+                                borderColor : 'rgba(255, 99, 132, 1)'
+                            }
+                        ]
+                };
+                var line = document.getElementById('myCanvas');
+                if(line){
+                    new Chart(line, {
+                        type : 'line',
+                        data : lineData,
+                        options : {
+                            legend : {
+                                display : false
+                            },
+                            scales:{
+                                yAxes : [
+                                    {
+                                        ticks : {
+                                            suggestedMin : 0,
+                                            beginAtZero : true
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+
+                    })
+                }
+
+            }
+    });
+
+    document.addEventListener('DOMContentLoaded', function(){
+        const urlParams = new URLSearchParams(window.location.search);
+        const UserInput = urlParams.get('userInput');
+
+        if (UserInput){
+            console.log("유저인풋", UserInput);
+            // 마커를 클릭하면 장소명을 표출할 인포윈도우 입니다
+            var infowindow = new kakao.maps.InfoWindow({zIndex:1});
+
+            var mapContainer = document.getElementById('map'), // 지도를 표시할 div
+                mapOption = {
+                    center: new kakao.maps.LatLng(37.566826, 126.9786567), // 지도의 중심좌표
+                    level: 3 // 지도의 확대 레벨
+                };
+
+            // 지도를 생성합니다
+            var map = new kakao.maps.Map(mapContainer, mapOption);
+
+            // 장소 검색 객체를 생성합니다
+            var ps = new kakao.maps.services.Places();
+
+            // 키워드로 장소를 검색합니다
+            ps.keywordSearch(UserInput, placesSearchCB);
+
+            // 키워드 검색 완료 시 호출되는 콜백함수 입니다
+            function placesSearchCB (data, status, pagination) {
+                if (status === kakao.maps.services.Status.OK) {
+
+                    // 검색된 장소 위치를 기준으로 지도 범위를 재설정하기위해
+                    // LatLngBounds 객체에 좌표를 추가합니다
+                    var bounds = new kakao.maps.LatLngBounds();
+
+                    for (var i=0; i<data.length; i++) {
+                        bounds.extend(new kakao.maps.LatLng(data[i].y, data[i].x));
+                    }
+
+                    // 검색된 장소 위치를 기준으로 지도 범위를 재설정합니다
+                    map.setBounds(bounds);
+                }
+            }
+
+            // 지도를 클릭한 위치에 표출할 마커입니다
+            var marker = new kakao.maps.Marker({
+                // 지도 중심좌표에 마커를 생성합니다
+                position: map.getCenter()
+            });
+            // 지도에 마커를 표시합니다
+            marker.setMap(map);
+        }
+    });
+
+    function searchMap(globalUserInput){
+        if(globalUserInput.trim() !== ""){
+            window.location.href = `/weather/main?userInput=${encodeURIComponent(globalUserInput)}`
+        }
+        else {
+            window.location.href="/weather/main";
+        }
+    }
+
+
+</script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=6730f8d7051bf499aa71bf05d75e59a5&libraries=services"></script>
+</body>
+</html>
